@@ -15,7 +15,7 @@
     },
     "require": {
         "php": ">=8.4",
-        "denisyu-1/articulate": "dev-main",
+        "denisyu-1/articulate": "^1.0.0",
         "psr/container": "^2.0",
         "symfony/config": "^8.0",
         "symfony/console": "^8.0",
