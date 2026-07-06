@@ -8,8 +8,6 @@ Symfony integration for the Articulate context-bounded ORM.
 composer require denisyu-1/articulate-symfony
 ```
 
-This bundle currently tracks `denisyu-1/articulate:dev-main`.
-
 If Symfony Flex does not enable the bundle automatically, add it manually:
 
 ```php
