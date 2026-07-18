@@ -5,6 +5,7 @@ namespace Articulate\Symfony\Tests\DependencyInjection;
 use Articulate\Connection;
 use Articulate\Modules\EntityManager\EntityManager;
 use Articulate\Modules\EntityManager\RepositoryFactoryInterface;
+use Articulate\Schema\EntityMetadataRegistry;
 use Articulate\Symfony\ArticulateSymfonyBundle;
 use Articulate\Symfony\DependencyInjection\ArticulateExtension;
 use Articulate\Symfony\DependencyInjection\Compiler\RepositoryPass;
@@ -51,11 +52,13 @@ final class ArticulateExtensionTest extends TestCase
         self::assertTrue($container->getAlias(EntityManager::class)->isPublic());
         self::assertTrue($container->hasDefinition('articulate.repository_factory'));
         self::assertTrue($container->hasAlias(RepositoryFactoryInterface::class));
+        self::assertTrue($container->hasDefinition('articulate.metadata_registry'));
+        self::assertTrue($container->hasAlias(EntityMetadataRegistry::class));
 
         $entityManagerDefinition = $container->getDefinition('articulate.entity_manager');
         self::assertSame([EntityManagerFactory::class, 'create'], $entityManagerDefinition->getFactory());
 
-        foreach (['init', 'diff', 'migrate', 'validate'] as $command) {
+        foreach (['init', 'diff', 'migrate', 'validate', 'warm_metadata_cache'] as $command) {
             self::assertTrue($container->hasDefinition(sprintf('articulate.command.%s', $command)));
             self::assertTrue($container->getDefinition(sprintf('articulate.command.%s', $command))->hasTag('console.command'));
         }

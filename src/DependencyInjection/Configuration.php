@@ -37,6 +37,7 @@ final class Configuration implements ConfigurationInterface
                         ->scalarNode('result')->defaultNull()->end()
                         ->scalarNode('statement')->defaultNull()->end()
                         ->scalarNode('second_level')->defaultNull()->end()
+                        ->scalarNode('metadata')->defaultNull()->end()
                         ->integerNode('second_level_ttl')->defaultValue(3600)->min(0)->end()
                     ->end()
                 ->end()
