@@ -16,7 +16,7 @@ final class ConfigurationTest extends TestCase
         self::assertSame('', $config['connection']['user']);
         self::assertSame('', $config['connection']['password']);
         self::assertFalse($config['connection']['persistent']);
-        self::assertSame('%kernel.project_dir%/src/Entity', $config['paths']['entities']);
+        self::assertSame(['%kernel.project_dir%/src/Entity'], $config['paths']['entities']);
         self::assertSame('%kernel.project_dir%/migrations/Articulate', $config['paths']['migrations']);
         self::assertSame('App\\Migrations\\Articulate', $config['paths']['migrations_namespace']);
         self::assertNull($config['cache']['result']);
@@ -34,7 +34,7 @@ final class ConfigurationTest extends TestCase
                 'persistent' => true,
             ],
             'paths' => [
-                'entities' => '/app/src/Domain',
+                'entities' => ['/app/src/Domain', '/app/src/OtherDomain'],
                 'migrations' => '/app/migrations',
                 'migrations_namespace' => 'App\\Migrations',
             ],
@@ -53,7 +53,7 @@ final class ConfigurationTest extends TestCase
         self::assertSame('app', $config['connection']['user']);
         self::assertSame('secret', $config['connection']['password']);
         self::assertTrue($config['connection']['persistent']);
-        self::assertSame('/app/src/Domain', $config['paths']['entities']);
+        self::assertSame(['/app/src/Domain', '/app/src/OtherDomain'], $config['paths']['entities']);
         self::assertSame('/app/migrations', $config['paths']['migrations']);
         self::assertSame('App\\Migrations', $config['paths']['migrations_namespace']);
         self::assertSame('cache.app', $config['cache']['result']);
@@ -61,5 +61,16 @@ final class ConfigurationTest extends TestCase
         self::assertSame('cache.articulate_entities', $config['cache']['second_level']);
         self::assertSame(60, $config['cache']['second_level_ttl']);
         self::assertTrue($config['logging']['enabled']);
+    }
+
+    public function testSingleEntitiesPathStringIsNormalizedToArray(): void
+    {
+        $config = (new Processor())->processConfiguration(new Configuration(), [[
+            'paths' => [
+                'entities' => '/app/src/Domain',
+            ],
+        ]]);
+
+        self::assertSame(['/app/src/Domain'], $config['paths']['entities']);
     }
 }

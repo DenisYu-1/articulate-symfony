@@ -36,7 +36,7 @@ final class ArticulateExtension extends Extension
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
-        /** @var array{connection: array{dsn: string, user: string, password: string, persistent: bool}, paths: array{entities: string, migrations: string, migrations_namespace: string}, cache: array{result: ?string, statement: ?string, second_level: ?string, second_level_ttl: int}, logging: array{enabled: bool}} $config */
+        /** @var array{connection: array{dsn: string, user: string, password: string, persistent: bool}, paths: array{entities: list<string>, migrations: string, migrations_namespace: string}, cache: array{result: ?string, statement: ?string, second_level: ?string, second_level_ttl: int}, logging: array{enabled: bool}} $config */
         $config = $this->processConfiguration($configuration, $configs);
 
         $this->registerConnection($container, $config);
@@ -153,7 +153,7 @@ final class ArticulateExtension extends Extension
     }
 
     /**
-     * @param array{paths: array{entities: string, migrations: string, migrations_namespace: string}} $config
+     * @param array{paths: array{entities: list<string>, migrations: string, migrations_namespace: string}} $config
      */
     private function registerCommands(ContainerBuilder $container, array $config): void
     {

@@ -39,7 +39,7 @@ final class ArticulateExtensionTest extends TestCase
                 'password' => 'secret',
             ],
             'paths' => [
-                'entities' => '/app/src/Entity',
+                'entities' => ['/app/src/Entity', '/app/src/OtherEntity'],
                 'migrations' => '/app/migrations',
                 'migrations_namespace' => 'App\\Migrations',
             ],
@@ -62,6 +62,29 @@ final class ArticulateExtensionTest extends TestCase
             self::assertTrue($container->hasDefinition(sprintf('articulate.command.%s', $command)));
             self::assertTrue($container->getDefinition(sprintf('articulate.command.%s', $command))->hasTag('console.command'));
         }
+
+        $expectedPaths = ['/app/src/Entity', '/app/src/OtherEntity'];
+        self::assertSame($expectedPaths, $container->getDefinition('articulate.command.diff')->getArgument(3));
+        self::assertSame($expectedPaths, $container->getDefinition('articulate.command.migrate')->getArgument(4));
+        self::assertSame($expectedPaths, $container->getDefinition('articulate.command.validate')->getArgument(1));
+        self::assertSame($expectedPaths, $container->getDefinition('articulate.command.warm_metadata_cache')->getArgument(1));
+    }
+
+    public function testSingleEntitiesPathStringIsNormalizedToArray(): void
+    {
+        $container = $this->createContainer();
+
+        $extension = new ArticulateExtension();
+        $extension->load([[
+            'paths' => [
+                'entities' => '/app/src/Entity',
+            ],
+        ]], $container);
+
+        self::assertSame(
+            ['/app/src/Entity'],
+            $container->getDefinition('articulate.command.diff')->getArgument(3),
+        );
     }
 
     public function testTaggedRepositoriesAreAddedToLocator(): void
