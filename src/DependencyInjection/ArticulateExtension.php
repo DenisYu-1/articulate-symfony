@@ -6,6 +6,7 @@ use Articulate\Commands\DiffCommand;
 use Articulate\Commands\InitCommand;
 use Articulate\Commands\MigrateCommand;
 use Articulate\Commands\ValidateCommand;
+use Articulate\Commands\WarmMetadataCacheCommand;
 use Articulate\Connection;
 use Articulate\Modules\Database\SchemaComparator\DatabaseSchemaComparator;
 use Articulate\Modules\Database\SchemaReader\DatabaseSchemaReaderInterface;
@@ -15,6 +16,7 @@ use Articulate\Modules\EntityManager\RepositoryFactoryInterface;
 use Articulate\Modules\Migrations\Generator\MigrationsCommandGenerator;
 use Articulate\QueryLogger\PsrQueryLogger;
 use Articulate\QueryLogger\QueryLoggerInterface;
+use Articulate\Schema\EntityMetadataRegistry;
 use Articulate\Schema\SchemaNaming;
 use Articulate\Symfony\Repository\ContainerRepositoryFactory;
 use Articulate\Symfony\Repository\EntityManagerFactory;
@@ -34,7 +36,7 @@ final class ArticulateExtension extends Extension
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
-        /** @var array{connection: array{dsn: string, user: string, password: string, persistent: bool}, paths: array{entities: string, migrations: string, migrations_namespace: string}, cache: array{result: ?string, statement: ?string, second_level: ?string, second_level_ttl: int}, logging: array{enabled: bool}} $config */
+        /** @var array{connection: array{dsn: string, user: string, password: string, persistent: bool}, paths: array{entities: list<string>, migrations: string, migrations_namespace: string}, cache: array{result: ?string, statement: ?string, second_level: ?string, second_level_ttl: int}, logging: array{enabled: bool}} $config */
         $config = $this->processConfiguration($configuration, $configs);
 
         $this->registerConnection($container, $config);
@@ -73,7 +75,7 @@ final class ArticulateExtension extends Extension
     }
 
     /**
-     * @param array{cache: array{result: ?string, statement: ?string, second_level: ?string, second_level_ttl: int}} $config
+     * @param array{cache: array{result: ?string, statement: ?string, second_level: ?string, second_level_ttl: int, metadata: ?string}} $config
      */
     private function registerEntityManager(ContainerBuilder $container, array $config): void
     {
@@ -86,6 +88,12 @@ final class ArticulateExtension extends Extension
             ->setPublic(false);
         $container->setAlias(RepositoryFactoryInterface::class, new Alias('articulate.repository_factory', false));
 
+        $container
+            ->setDefinition('articulate.metadata_registry', new Definition(EntityMetadataRegistry::class))
+            ->setArguments([$this->optionalReference($config['cache']['metadata'])])
+            ->setPublic(false);
+        $container->setAlias(EntityMetadataRegistry::class, new Alias('articulate.metadata_registry', false));
+
         $entityManager = new Definition(EntityManager::class);
         $entityManager
             ->setFactory([EntityManagerFactory::class, 'create'])
@@ -95,7 +103,7 @@ final class ArticulateExtension extends Extension
                 null,
                 null,
                 null,
-                null,
+                new Reference('articulate.metadata_registry'),
                 null,
                 null,
                 $this->optionalReference($config['cache']['result']),
@@ -145,7 +153,7 @@ final class ArticulateExtension extends Extension
     }
 
     /**
-     * @param array{paths: array{entities: string, migrations: string, migrations_namespace: string}} $config
+     * @param array{paths: array{entities: list<string>, migrations: string, migrations_namespace: string}} $config
      */
     private function registerCommands(ContainerBuilder $container, array $config): void
     {
@@ -183,6 +191,14 @@ final class ArticulateExtension extends Extension
                 $config['paths']['entities'],
             ])
             ->addTag('console.command', ['command' => 'articulate:validate']);
+
+        $container
+            ->setDefinition('articulate.command.warm_metadata_cache', new Definition(WarmMetadataCacheCommand::class))
+            ->setArguments([
+                new Reference('articulate.metadata_registry'),
+                $config['paths']['entities'],
+            ])
+            ->addTag('console.command', ['command' => 'articulate:warm-metadata-cache']);
     }
 
     private function optionalReference(?string $serviceId): mixed

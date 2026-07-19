@@ -5,6 +5,7 @@ namespace Articulate\Symfony\Tests\DependencyInjection;
 use Articulate\Connection;
 use Articulate\Modules\EntityManager\EntityManager;
 use Articulate\Modules\EntityManager\RepositoryFactoryInterface;
+use Articulate\Schema\EntityMetadataRegistry;
 use Articulate\Symfony\ArticulateSymfonyBundle;
 use Articulate\Symfony\DependencyInjection\ArticulateExtension;
 use Articulate\Symfony\DependencyInjection\Compiler\RepositoryPass;
@@ -38,7 +39,7 @@ final class ArticulateExtensionTest extends TestCase
                 'password' => 'secret',
             ],
             'paths' => [
-                'entities' => '/app/src/Entity',
+                'entities' => ['/app/src/Entity', '/app/src/OtherEntity'],
                 'migrations' => '/app/migrations',
                 'migrations_namespace' => 'App\\Migrations',
             ],
@@ -51,14 +52,39 @@ final class ArticulateExtensionTest extends TestCase
         self::assertTrue($container->getAlias(EntityManager::class)->isPublic());
         self::assertTrue($container->hasDefinition('articulate.repository_factory'));
         self::assertTrue($container->hasAlias(RepositoryFactoryInterface::class));
+        self::assertTrue($container->hasDefinition('articulate.metadata_registry'));
+        self::assertTrue($container->hasAlias(EntityMetadataRegistry::class));
 
         $entityManagerDefinition = $container->getDefinition('articulate.entity_manager');
         self::assertSame([EntityManagerFactory::class, 'create'], $entityManagerDefinition->getFactory());
 
-        foreach (['init', 'diff', 'migrate', 'validate'] as $command) {
+        foreach (['init', 'diff', 'migrate', 'validate', 'warm_metadata_cache'] as $command) {
             self::assertTrue($container->hasDefinition(sprintf('articulate.command.%s', $command)));
             self::assertTrue($container->getDefinition(sprintf('articulate.command.%s', $command))->hasTag('console.command'));
         }
+
+        $expectedPaths = ['/app/src/Entity', '/app/src/OtherEntity'];
+        self::assertSame($expectedPaths, $container->getDefinition('articulate.command.diff')->getArgument(3));
+        self::assertSame($expectedPaths, $container->getDefinition('articulate.command.migrate')->getArgument(4));
+        self::assertSame($expectedPaths, $container->getDefinition('articulate.command.validate')->getArgument(1));
+        self::assertSame($expectedPaths, $container->getDefinition('articulate.command.warm_metadata_cache')->getArgument(1));
+    }
+
+    public function testSingleEntitiesPathStringIsNormalizedToArray(): void
+    {
+        $container = $this->createContainer();
+
+        $extension = new ArticulateExtension();
+        $extension->load([[
+            'paths' => [
+                'entities' => '/app/src/Entity',
+            ],
+        ]], $container);
+
+        self::assertSame(
+            ['/app/src/Entity'],
+            $container->getDefinition('articulate.command.diff')->getArgument(3),
+        );
     }
 
     public function testTaggedRepositoriesAreAddedToLocator(): void
